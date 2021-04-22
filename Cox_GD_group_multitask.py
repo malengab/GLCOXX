@@ -322,37 +322,12 @@ def group_list(group):	# map groups into lists
 		x[D[group[jj]]].append(jj)	# append indices of gloup elements into respective lists
 	return x, unq
 ########################################################################################
-#def GD(beta,c1,lam,gamma0):
 def GD(method,lr,beta0,c1,lam,epoch):#,*args):
-	# arg1 = epoch
-#	if len(args)==1:
-#		epoch = args[0]
-#	else:
-#		epoch = 200   # number of iterations
-#	lossold, loss_delta = 0, 100	# initiate pga stopping criteria
-#	incr = 100   # initiate increment to something silly
-#	tol = 1e-6  # tolerance
 	tol2 = 1e-3	# coefficient cutoff
-#	kk = 0 	# initiate interation nr
-#	kmax = 500	# max number of iterations
-##	print('    k         ||ss||              max(lp(r))       '  )
-#	beta_fin = copy.deepcopy(beta)	# store forever
-#	beta_it = copy.deepcopy(beta)  # used for iterating
-#	betaoldold = copy.deepcopy(beta) # np.zeros(n_genes)#copy.deepcopy(beta)#beta[:]
-#	betaold = copy.deepcopy(beta) #np.zeros(n_genes)#copy.deepcopy(beta)
-#	derold = np.zeros(c1.n_genes)#,dtype='float32') 	#keep the gradient of the previous step
-#	indzero = []			# indices of zero coefficients in every iteration
-#	nnrange = range(c1.n_genes)	# complement to indzero
-#	nonzero = np.asarray([ii for ii in range(c1.n_genes)])	
 	c1_copy = copy.deepcopy(c1);
 	beta = copy.deepcopy(beta0)
-#	c1_copy.x = c1_copy.x.detach().cpu().numpy()
-#	cind_train = np.zeros(kmax)  # training c-values
-#	beta_v, loss_v = np.zeros([kmax,c1.n_genes]), np.zeros(kmax)   # save betas, loss througout the iterations
-#	
-	if method == 'SGD':
-#		optimizer = optim.SGD([beta], lr=0.01, momentum=0.5)
-#			beta = beta0.clone().detach().requires_grad_(True)
+
+	if method == 'SGD':  # choose optimization method
 		optimizer = optim.SGD([beta], lr=lr, momentum=0.5)
 	elif method == 'Adam':
 		optimizer = optim.Adam([beta], lr=lr)#,betas=(0.7, 0.1))
@@ -365,7 +340,6 @@ def GD(method,lr,beta0,c1,lam,epoch):#,*args):
 	
 	i= 0 # epoch counter
 	tol = 1e-4; # stopping criterium
-#	epoch = 200  # max number of iterations
 	incr = 10; # initialize increment
 	loss_v = np.zeros(epoch)  # loss function, save vector
 	loss_old, lossdelta = 100, 100 # initialize to something silly
@@ -383,7 +357,7 @@ def GD(method,lr,beta0,c1,lam,epoch):#,*args):
 		
 		beta.grad = Cfunc.lp()+lam*lreg2
 		optimizer.step()		
-#	print(kk,loss, len(nonzero))
+		
 #		# element-wise cutoff
 #		beta[torch.abs(beta)<tol2] = 0 # elements < tol -> 0
 
@@ -401,331 +375,9 @@ def GD(method,lr,beta0,c1,lam,epoch):#,*args):
 
 	retrn = ret() # return variables
 	retrn.beta, retrn.loss = beta.clone().detach(), loss
-#	retrn.cval = cind_train
-#	retrn.beta, retrn.loss, retrn.nonzero, retrn.nonzerogr, retrn.cval = beta_fin, loss, nonzero, nonzerogr, cind_train[:kk]
-#	retrn.beta_v, retrn.loss_v = beta_v[:kk,], loss_v[:kk]
-#	return(beta_fin, loss, nonzero, nonzerogr)
 	return(retrn)
-########################################################################################	
-#############################################################################
-def npGD_gen(beta0_comp,ca,lamv,muv,alpha)	:
-	lossold, loss_delta = 0, 100	# initiate pga stopping criteria
-	incr = 100   # initiate increment to something silly
-	tol = 1e-6  # tolerance
-	tol2 = 1e-3
-	kk = 0 	# initiate interation nr
-	kmax = 500	# max number of iterations
-#	print('    k         ||ss||              max(lp(r))       '  )
-	nc = len(ca)  # nr of cancers
-	beta_fin = copy.deepcopy(beta0_comp)	# store forever
-	beta_fin_old = copy.deepcopy(beta0_comp)
-	
-	beta_it = copy.deepcopy(beta0_comp)  # used for iterating
-	
-	betaoldold = copy.deepcopy(beta0_comp) # np.zeros(n_genes)#copy.deepcopy(beta)#beta[:]
-	betaold = copy.deepcopy(beta0_comp) #np.zeros(n_genes)#copy.deepcopy(beta)
-	
-#	derold = np.zeros(c1.n_genes) 	#keep the gradient of the previous step
-#	derold = [np.zeros(c[cc].n_genes) for cc in range(nc)] 	#keep the gradient of the previous step
-	derold = [[] for cc in range(nc)]
-#	indzero = []			# indices of zero coefficients in every iteration
-#	indzero = [[] for cc in range(nc)] # indices of zero coefficients in every iteration
-#	nnrange = [range(c[cc].n_genes) for cc in range(nc)]	# complement to indzero
-	nonzerogr = [[] for cc in range(nc)] # indices of zero coefficients in every iteration
-	
-#	beta_it_long = np.concatenate([beta,beta2])  # used for iterating
-#	beta_it_long = copy.deepcopy(np.concatenate(beta0_comp))  
-#	betaold_long = copy.deepcopy(np.concatenate(beta0_comp)) # np.zeros(n_genes)#copy.deepcopy(beta)#beta[:]
-#	betaoldold_long = copy.deepcopy(np.concatenate(beta0_comp)) #np.zeros(n_genes)#copy.deepcopy(beta)
-#	derold_long = copy.deepcopy(np.concatenate(derold)) 	#keep the gradient of the previous step
-#	nonzero = np.asarray([*range(n_genes)])	# store nonzero coefficient, discard the rest # rrr = [*rr] to make it iterable
-	nonzero = [np.asarray([ii for ii in range(ca[cc].n_genes)]) for cc in range(nc)]	
-#	nonzero2 = np.asarray([ii for ii in range(c2.n_genes)])	
-#	flag1,flag2 = True, True # true if not converged
-	flag, loss_part = np.ones(nc).astype(bool), np.zeros(nc)
-	glist_orig, gunq_orig = group_list(ca[0].groups)
-
-	while (incr>tol) and (kk<kmax) and (loss_delta>tol):
-		
-#		loss, der = 0, [np.zeros(len(nonzero[cc])) for cc in range(nc)] # initialize loss f
-		loss, glist, der, ss = 0, [[] for cc in range(nc)], [[] for cc in range(nc)], [[] for cc in range(nc)]
-		# add single contributions
-		for cc in range(nc):
-			if flag[cc]:
-				Cfunc = Cox(ca[cc],beta_it[cc])
-				glist_temp, gunq_temp = group_list(ca[cc].groups)	# groups in lists, unique groups
-				glist[cc] = copy.copy(glist_temp)
-				lreg,lpreg = lasso(beta_it[cc],glist_temp)	# compute lasso regeression
-				der[cc] = Cfunc.lp() + lamv[cc]*lpreg
-				loss_part[cc] = Cfunc.l() + lamv[cc]*lreg
-				
-## test convergence
-#				Ctest = Cfunc.l()
-#				Cdertest1 = Cfunc.lp()
-#				h = np.zeros(5)
-#				der_app = np.zeros(5)
-#				h[0] = 0.1
-#				for mm in range(1,5):
-#					h[mm] = h[mm-1]/2 
-#				diff = np.zeros(5)
-#				for ii in range(5):
-#					beta3 = copy.copy(beta_it[cc]); #np.array([0,2,2,3+h[ii],4])
-#					beta4 = copy.copy(beta_it[cc]); #np.array([0,2,2,3+h[ii],4])
-#					beta3[0] += h[ii]
-#					beta4[0] -= h[ii]
-#					Cfunc_test = Cox(ca[cc],beta3)
-#					Ctest2 = Cfunc_test.l()
-#					Cfunc_test2 = Cox(ca[cc],beta4)
-#					Ctest3 = Cfunc_test2.l()
-##					Cdertest12 = Cfunc_test.lp()
-#					der_app[ii] = (Ctest2-Ctest3)/2/h[ii]
-#					diff[ii] = np.abs(der_app[ii]-Cdertest1[0])		
-#				plt.loglog(h,diff,'o-',h,h,'*-',h,h**2,'s-')
-#				plt.show()	
-
-
-			else:
-				der[cc] = []
-			loss += loss_part[cc]
-				
-		# add multitasking
-		for cc in range(nc):
-			for cc2 in range(cc+1,nc): 
-				if (reg == "1"):
-					rr, rp1, rp2 = multireg(beta_fin[cc],beta_fin[cc2],alpha)	# multitask regression terms
-				elif (reg=='7'):
-					rr, rp1, rp2 = multireg7(beta_fin[cc],beta_fin[cc2])#,dnew)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='9'):
-					rr, rp1, rp2 = multireg9(beta_fin[cc],beta_fin[cc2])#,dnew)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='10'):
-					rr, rp1, rp2 = multireg10(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='11'):
-					rr, rp1, rp2 = multireg11(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='12'):
-					rr, rp1, rp2 = multireg12(beta_fin[cc],beta_fin[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='13'):
-					rr, rp1, rp2 = multireg13(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='14'):
-					rr, rp1, rp2 = multireg14(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='15'):
-					rr, rp1, rp2 = multireg15(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='16'):
-					rr, rp1, rp2 = multireg16(beta_fin[cc],beta_fin[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-
-				else:
-					raise ValueError('Given reg is not in the list.')
-				
-		
-				loss += muv[cc,cc2]*rr
-				der[cc] += muv[cc,cc2]*rp1[nonzero[cc]]
-				der[cc2] += muv[cc,cc2]*rp2[nonzero[cc2]]
-
-#		for cc in range(nc):   # if all groups are zero, we don't want to continue
-#			if (~flag[cc]):
-#				der[cc] = []
-		##### BOOKMARK #######
-#		if flag1:
-#			glist, gunq = group_list(c1.groups)	# groups in lists, unique groups
-#			Cfunc = Cox(c1,beta_it)
-#			lreg,lpreg = lasso(beta_it,glist)	# compute lasso regeression
-##							
-#		if flag2:
-#			glist2, gunq2 = group_list(c2.groups)	# groups in lists, unique groups		
-#			Cfunc2 = Cox(c2,beta_it2)
-#			lreg2,lpreg2 = lasso(beta_it2,glist2)	# compute lasso regeression
-		
-#		loss = Cfunc.l() + Cfunc2.l() + lam*lreg + lam2*lreg2 + mu*rr  # compute loss & gradient
-##		der = np.zeros(len(nonzero)+len(nonzero2))
-#		if flag1:
-#			der = Cfunc.lp() + lam*lpreg + mu*rp1[nonzero]
-#		else:
-#			der = []
-#		if flag2:
-#			der2 = Cfunc2.lp() + lam2*lpreg2 + mu*rp2[nonzero2]
-#		else:
-#			der2 = []
-		
-#		if (flag1==False and flag2==False):
-#			break
-		if np.all(~flag):
-			break
-		
-#		der_long = np.concatenate([der,der2])
-		der_long = np.concatenate(der)
-		derold_long = np.concatenate(derold)
-					
-		if(kk==0):	# in the first step we have no derold
-			gamma = gamma0_multi
-#			gamma = copy.copy(gamma0)
-#			if (mu<1e-3):
-###			if (np.linalg.norm(beta_it_long,2)<1e-5):
-#				gamma = 0.05
-#			else:
-#				gamma = 0.005		
-		else: # 	update gradient step
-#			if (np.linalg.norm(der_long-derold_long,2)<1e-10):
-			if (np.linalg.norm(der_long-np.concatenate(derold),2)<1e-10):
-				gamma = 0
-			else:
-				gamma = np.abs(np.dot(np.concatenate(betaold)-np.concatenate(betaoldold),der_long-derold_long))/(np.linalg.norm(der_long-derold_long,2))**2	# Barzilai-Borwein method)			
-#				gamma = np.abs(np.dot(betaold_long-betaoldold_long,der_long-derold_long))/(np.linalg.norm(der_long-derold_long,2))**2	# Barzilai-Borwein method)			
-#				gamma[0] = np.abs(np.dot(np.concatenate(betaold)[:len(nonzero)]-np.concatenate(betaoldold)[:len(nonzero)],der_long[:len(nonzero)]-derold_long[:len(nonzero)]))/(np.linalg.norm(der_long[:len(nonzero)]-derold_long[:len(nonzero)],2))**2	# Barzilai-Borwein method)			
-#				gamma[1] = np.abs(np.dot(np.concatenate(betaold)[len(nonzero):]-np.concatenate(betaoldold)[len(nonzero):]	,der_long[len(nonzero):]	-derold_long[len(nonzero):]	))/(np.linalg.norm(der_long[len(nonzero):]	-derold_long[len(nonzero):]	,2))**2	# Barzilai-Borwein method)			
-#			gamma = np.min([gamma1,gamma2])
-				
-#		ss_long = gamma*der_long  # absolute increment
-#		beta_it_long -= ss_long				
-#		# update beta and increment
-#		incr = np.linalg.norm(ss_long)/np.linalg.norm(beta_it_long)	# relative increment
-		for cc in range(nc):
-			ss[cc] = gamma*np.array(der[cc])  # absolute increment
-#			ss[cc] = gamma[cc]*np.array(der[cc])  # absolute increment
-			beta_it[cc] -= ss[cc]
-		# update beta and increment
-		incr = np.linalg.norm(np.concatenate(ss))/np.linalg.norm(np.concatenate(beta_it))	# relative increment
-		loss_delta = np.abs(loss-lossold)	# check for stopping criteria
-		lossold = copy.copy(loss)
-						
-#		beta_it = beta_it_long[:len(nonzero)]		# split beta into two sets
-#		beta_it2 = beta_it_long[len(nonzero):]		# split beta into two sets
-#		beta_it = np.split(beta_it_long,np.cumsum([len(nonzero[ii]) for ii in range(nc-1)])) # split back into individual cancers
-	
-		derold = [[] for cc in range(nc)]
-		# check for new zeros
-		for cc in range(nc):
-			if flag[cc]:
-				indzero = []
-##				setzero = []
-#				for jj in range(len(glist[cc])):
-#					if (np.all(np.abs(beta_it[cc][glist[cc][jj]])<tol2)): # all elements in a group < tol
-#						indzero.extend(glist[cc][jj])	# extend = append multiple elements
-#						setzero.extend(glist[cc][jj])	# extend = append multiple elements
-				# update the zero set
-				nnrange = [i for i in range(len(nonzero[cc])) if i not in indzero]    # set of all event indices
-				if(len(nnrange) == 0): # break in case all coefficients are 0
-					nonzero[cc] = []
-#					nonzerogr[cc] = []
-					beta_fin[cc] = np.zeros(ca[cc].n_genes)
-					ca[cc].groups = []
-					betaoldold[cc] = []
-					betaold[cc] = []
-					derold[cc] = []
-					beta_it[cc] = []
-	#				incr, loss_delta = 0,0 	# so that the stopping condition only depends on the other variable
-	#				print(kk, loss, len(nonzero))
-					flag[cc]=False # do not continue
-				else:
-#					print(len(indzero[cc]))
-					indy = nonzero[cc][indzero]
-					beta_fin_old[cc] = copy.deepcopy(beta_fin[cc])
-					beta_fin[cc][indy] = np.zeros(len(indzero))	# save the full nonsparse beta
-			
-#					# update nonzero indices
-					nonzero[cc] = nonzero[cc][nnrange]	# update nonzero set
-					beta_it[cc] = beta_it[cc][nnrange]
-					ca[cc].groups = ca[cc].groups[nnrange]
-					beta_fin[cc][nonzero[cc]] = copy.deepcopy(beta_it[cc])  # update nonzeros
-					ca[cc].x = ca[cc].x[:,nnrange]
-		
-					betaoldold[cc] = copy.deepcopy(betaold[cc][nnrange]) #copy.deepcopy(betaold[nnrange])
-					betaold[cc] = copy.deepcopy(beta_it[cc])
-					derold[cc] = copy.deepcopy(der[cc][nnrange])
-					
-##		for cc in range(nc):
-#					Cfunc = Cox(ca[cc],betaoldold[cc])
-#					glist_temp, gunq_temp = group_list(ca[cc].groups)	# groups in lists, unique groups
-#					lreg,lpreg = lasso(betaoldold[cc],glist_temp)	# compute lasso regeression
-#					derold[cc] = Cfunc.lp() + lamv[cc]*lpreg
-#		
-#		for cc in range(nc):
-#			for cc2 in range(cc+1,nc): 
-#				rr, rp1, rp2 = multireg16(beta_fin_old[cc],beta_fin_old[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-#				derold[cc] += muv[cc,cc2]*rp1[nonzero[cc]]
-#				derold[cc2] += muv[cc,cc2]*rp2[nonzero[cc2]]
-					
-#					if len(setzero)>0: 
-#						beta_it[cc][setzero] = np.zeros(len(setzero))
-#					beta_fin[cc][nonzero[cc]] = copy.deepcopy(beta_it[cc])  # update nonzeros
-#					ca[cc].x = ca[cc].x[:,nnrange]
-#		
-#					betaoldold[cc] = copy.deepcopy(betaold[cc][nnrange]) #copy.deepcopy(betaold[nnrange])
-#					betaold[cc] = copy.deepcopy(beta_it[cc])
-#					derold[cc] = copy.deepcopy(der[cc][nnrange])
-#					
-#					print(kk, loss, len(nonzero[cc]))
-#		
-#		if flag2:					
-#				# check for new zeros
-#			indzero2 = []
-#			for jj in range(len(glist2)):
-#				if (np.all(np.abs(beta_it2[glist2[jj]])<tol2)):
-#					indzero2.extend(glist2[jj])	# extend = append multiple elements				
-#			# update the zero set
-#			nnrange2 = [i for i in range(len(nonzero2)) if i not in indzero2]    # set of all event indices
-#			if(len(nnrange2) == 0): # break in case all coefficients are 0
-#				nonzero2 = []
-#				nonzerogr2 = []
-#				beta_fin2 = np.zeros(c2.n_genes)
-#				c2.groups = []
-#				betaoldold2 = []
-#				betaold2 = []
-#				derold2 = []
-#				beta_it2 = []
-#	#			incr2, loss_delta2 = 0,0 	# so that the stopping condition only depends on the other variable
-#	#			print(kk, loss2, len(nonzero2))
-#				flag2 = False
-#			else:
-#	#			# update beta and increment
-#	#			incr2 = np.linalg.norm(ss2)/np.linalg.norm(beta_it2)	# relative increment
-#				indy2 = nonzero2[indzero2]
-#				beta_fin2[indy2] = np.zeros(len(indzero2))	# save the full nonsparse beta
-#			
-#				# update nonzero indices
-#				nonzero2 = nonzero2[nnrange2]	# update nonzero set
-#				beta_it2 = beta_it2[nnrange2]
-#				c2.groups = c2.groups[nnrange2]
-#				beta_fin2[nonzero2] = beta_it2  # update nonzeros
-##				x_ordered2 = x_ordered2[:,nnrange2]
-#				c2.x = c2.x[:,nnrange2]
-#				
-#				betaoldold2 = betaold2[nnrange2] #copy.deepcopy(betaold[nnrange])
-#				betaold2 = copy.copy(beta_it2)
-#				derold2 = copy.copy(der2[nnrange2])
-#				
-##				print(kk, len(nonzero2))
-#	
-#		betaold_long = np.concatenate([betaold,betaold2])
-#		betaoldold_long = np.concatenate([betaoldold,betaoldold2])
-#		derold_long = np.concatenate([derold,derold2])
-#		beta_it_long = np.concatenate([beta_it,beta_it2])
-#	
-#		betaold_long = copy.deepcopy(np.concatenate(betaold))
-#		betaoldold_long = copy.deepcopy(np.concatenate(betaoldold))
-#		derold_long = copy.deepcopy(np.concatenate(derold))
-#		beta_it_long = copy.deepcopy(np.concatenate(beta_it))
-							
-#		print(kk,loss, len(nonzero[0]), len(nonzero[1]))	
-		kk += 1	# increase iteration count
-		if(kk == kmax):
-			eprint('GD did not converge for some values of lambda.');
-	
-	print(kk,loss, [len(nonzero[cc]) for cc in range(nc)])	
-#	glist, nonzerogr = group_list(c1.groups)	# groups in lists, unique groups
-#	glist2, nonzerogr2 = group_list(c2.groups)	# groups in lists, unique groups
-	for cc in range(nc):
-		glist[cc], nonzerogr[cc] = group_list(ca[cc].groups)	# groups in lists, unique groups
-		nonzero[cc] = np.arange(ca[cc].n_genes)[np.abs(beta_fin[cc])>tol2]
-
-#	return(beta_fin, loss, nonzero, nonzerogr,beta_fin2, loss, nonzero2, nonzerogr2)
-	return beta_fin, nonzero, nonzerogr
 #############################################################################
 def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
-#	lr = 0.0001;
-#	method ='Rprop'
-	# kmax as well
-	
-	## change above
-	
 	loss_delta = 100	# initiate pga stopping criteria
 	loss_old = 100 # initialize to something silly
 	incr = 100   # initiate increment to something silly
@@ -738,12 +390,8 @@ def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
 #	beta_fin_old = copy.deepcopy(beta0_comp)
 	
 	beta_it = copy.deepcopy(beta0_comp)  # used for iterating
-#	beta = torch.concatenate(beta_it)
 	beta = torch.cat(beta_it)
 	
-#	betaoldold = copy.deepcopy(beta0_comp) # np.zeros(n_genes)#copy.deepcopy(beta)#beta[:]
-#	betaold = copy.deepcopy(beta0_comp) #np.zeros(n_genes)#copy.deepcopy(beta)
-#	derold = [[] for cc in range(nc)]
 	nonzerogr = [[] for cc in range(nc)] # indices of zero coefficients in every iteration
 	nonzero = [np.asarray([ii for ii in range(ca[cc].n_genes)]) for cc in range(nc)]	
 	flag, loss_part = np.ones(nc).astype(bool), np.zeros(nc)
@@ -751,8 +399,6 @@ def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
 ##############
 
 	if method == 'SGD':
-#		optimizer = optim.SGD([beta], lr=0.01, momentum=0.5)
-#			beta = beta0.clone().detach().requires_grad_(True)
 		optimizer = optim.SGD([beta], lr=lr, momentum=0.5)
 	elif method == 'Adam':
 		optimizer = optim.Adam([beta], lr=lr)#,betas=(0.7, 0.1))
@@ -765,15 +411,11 @@ def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
 	while (incr>tol) and (kk<kmax) and (loss_delta>tol):
 		beta_old = beta.clone().detach().requires_grad_(False)		
 		optimizer.zero_grad()		
-#		loss, glist, der = 0, [[] for cc in range(nc)], [[] for cc in range(nc)]
 		loss, der = 0, [[] for cc in range(nc)]
 		# add single contributions
 		for cc in range(nc):
 			if flag[cc]:
 				Cfunc = Cox(ca[cc],beta_it[cc])
-#				glist_temp, gunq_temp = group_list(ca[cc].groups)	# groups in lists, unique groups
-#				glist[cc] = copy.copy(glist_temp)
-#				lreg,lpreg = lasso(beta_it[cc],glist_temp)	# compute lasso regeression
 				lreg,lpreg = lasso(beta_it[cc],glist_orig)	# compute lasso regeression
 				der[cc] = Cfunc.lp() + lamv[cc]*lpreg
 				loss_part[cc] = Cfunc.l() + lamv[cc]*lreg
@@ -785,39 +427,8 @@ def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
 		# add multitasking
 		for cc in range(nc):
 			for cc2 in range(cc+1,nc): 
-				if (reg == "1"):
-					rr, rp1, rp2 = multireg(beta_fin[cc],beta_fin[cc2],alpha)	# multitask regression terms
-				elif (reg=='7'):
-					rr, rp1, rp2 = multireg7(beta_fin[cc],beta_fin[cc2])#,dnew)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='9'):
-					rr, rp1, rp2 = multireg9(beta_fin[cc],beta_fin[cc2])#,dnew)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='10'):
-					rr, rp1, rp2 = multireg10(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='11'):
-					rr, rp1, rp2 = multireg11(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='12'):
-					rr, rp1, rp2 = multireg12(beta_fin[cc],beta_fin[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='13'):
-					rr, rp1, rp2 = multireg13(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='14'):
-					rr, rp1, rp2 = multireg14(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='15'):
-					rr, rp1, rp2 = multireg15(beta_fin[cc],beta_fin[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='16'):
-#					rr, rp1, rp2 = multireg16(beta_fin[cc],beta_fin[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-					rr, rp1, rp2 = multireg16(beta_it[cc],beta_it[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='18'):
-					rr, rp1, rp2 = multireg18(beta_it[cc],beta_it[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='19'):
-					rr, rp1, rp2 = multireg19(beta_it[cc],beta_it[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='20'):
-					rr, rp1, rp2 = multireg20(beta_it[cc],beta_it[cc2])	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='21'):
-					rr, rp1, rp2 = multireg21(beta_it[cc],beta_it[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='22'):
+				if (reg=='22'):
 					rr, rp1, rp2 = multireg22(beta_it[cc],beta_it[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
-				elif (reg=='23'):
-					rr, rp1, rp2 = multireg23(beta_it[cc],beta_it[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
 				elif (reg=='24'):
 					rr, rp1, rp2 = multireg24(beta_it[cc],beta_it[cc2],glist_orig)	# multitask regression terms # OBS doesnt have to recomputed all the time
 				else:
@@ -850,71 +461,17 @@ def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
 				if (torch.all(torch.abs(beta_it[cc][glist_orig[jj]])<tol2)): # all elements in a group < tol
 					beta_it[cc][glist_orig[jj]] = 0
 		
-#		loss_old = loss.clone().detach().numpy()
-#		loss_v[i] = loss_old
-#		score_train = torch.matmul(c1_copy.x,beta)#.flatten().astype(float)
-#		cind_train = c_index(score_train,c1_copy.os_status,c1_copy.os_months)			
 		incr = (torch.max(torch.abs(beta_old - beta.clone().detach())))/torch.max(torch.abs(beta_old)) #!!
 		
 		# update beta and increment
-#		incr = np.linalg.norm(np.concatenate(ss))/np.linalg.norm(np.concatenate(beta_it))	# relative increment
 		loss_temp = loss.clone().detach().numpy()
 		loss_delta = np.abs(loss_temp-loss_old)	# check for stopping criteria
 		loss_old = copy.copy(loss_temp)
-#		lossold = copy.copy(loss)
-							
-#		derold = [[] for cc in range(nc)]
-		# check for new zeros
-#		for cc in range(nc):
-#			if flag[cc]:
-#				indzero = []
-###				setzero = []
-##				for jj in range(len(glist[cc])):
-##					if (np.all(np.abs(beta_it[cc][glist[cc][jj]])<tol2)): # all elements in a group < tol
-##						indzero.extend(glist[cc][jj])	# extend = append multiple elements
-##						setzero.extend(glist[cc][jj])	# extend = append multiple elements
-#				# update the zero set
-#				nnrange = [i for i in range(len(nonzero[cc])) if i not in indzero]    # set of all event indices
-#				if(len(nnrange) == 0): # break in case all coefficients are 0
-#					nonzero[cc] = []
-##					nonzerogr[cc] = []
-##					beta_fin[cc] = np.zeros(ca[cc].n_genes)
-#					ca[cc].groups = []
-#					betaoldold[cc] = []
-#					betaold[cc] = []
-##					derold[cc] = []
-#					beta_it[cc] = []
-#	#				incr, loss_delta = 0,0 	# so that the stopping condition only depends on the other variable
-#	#				print(kk, loss, len(nonzero))
-#					flag[cc]=False # do not continue
-#				else:
-##					print(len(indzero[cc]))
-#					indy = nonzero[cc][indzero]
-#					beta_fin_old[cc] = copy.deepcopy(beta_fin[cc])
-##					beta_fin[cc][indy] = np.zeros(len(indzero))	# save the full nonsparse beta
-##					beta_fin[cc][indy] = torch.zeros(len(indzero))	# save the full nonsparse beta
-#			
-##					# update nonzero indices
-#					nonzero[cc] = nonzero[cc][nnrange]	# update nonzero set
-#					beta_it[cc] = beta_it[cc][nnrange]
-#					ca[cc].groups = ca[cc].groups[nnrange]
-##					beta_fin[cc][nonzero[cc]] = copy.deepcopy(beta_it[cc])  # update nonzeros
-#					ca[cc].x = ca[cc].x[:,nnrange]
-#		
-#					betaoldold[cc] = copy.deepcopy(betaold[cc][nnrange]) #copy.deepcopy(betaold[nnrange])
-#					betaold[cc] = copy.deepcopy(beta_it[cc])
-##					derold[cc] = copy.deepcopy(der[cc][nnrange])
-				
+											
 		kk += 1	# increase iteration count
 		if(kk == kmax):
 			eprint('GD did not converge for some values of lambda.');
-	
-#	print(kk,loss, [len(nonzero[cc]) for cc in range(nc)])	
-#	for cc in range(nc):
-#		glist[cc], nonzerogr[cc] = group_list(ca[cc].groups)	# groups in lists, unique groups
-#		nonzero[cc] = np.arange(ca[cc].n_genes)[np.abs(beta_fin[cc])>tol2]
 
-#	return beta_fin, nonzero, nonzerogr
 	return beta_it, nonzero, nonzerogr
 ##################################################################################################
 def c_index(score,y,z): # concordance index, must be in increasing order (time-wise): ties are ignored
@@ -951,97 +508,6 @@ def bord(K,n_samples): # find borders of K splits on n_samples elements
 			borders = np.append(borders,int(ii * fold_length + kvar))	# after kvar is distributed everything is shifted with kvar
 	borders = np.append(borders,n_samples)  # add right end point
 	return borders
-###############################################################################################
-	
-#from collections import namedtuple
-#TaskInput = namedtuple('c1_copy','K','lam','beta0','rseed','c1done','gamma00');
-
-
-#def CV_lambda1(input):  #Input has type TaskInput
-def npCV_lambda1(c1,K,lam,beta0,rseed,c1done,gamma00):
-#	c1 = input.c1; #et.c.
-#	K = input.K
-#	lam = input.lam
-#	beta0 = input.beta0
-#	rseed = input.rseed
-#	c1done = input.c1done
-#	gamma00 = input.gamma00
-	nonzgr=[]	# collect nonzero groups for analysis
-	score = np.zeros(c1.n_samples)	# store the score
-	
-	# random shuffling of the data
-	indices = np.arange(c1.n_samples)
-	np.random.seed(seed=rseed)
-	np.random.shuffle(indices)
-	
-	x_shuffle = c1.x[indices]
-	y_shuffle = c1.os_status[indices]	#os_status_ordered
-	z_shuffle = c1.os_months[indices]	#os_months_ordered
-	
-	borders = bord(K,c1.n_samples)	# borders of folds
-	beta0new = np.zeros((c1.n_genes,K))	# initiate beta0 to 0
-	cav = 0 # average c-index
-	
-	for ii in range(K):
-
-		left = int(borders[ii])   # include left endpoint
-		right = int(borders[ii+1]) # exclude right endpoint // that's why we artificially added the righmost point +1
-
-  	############### Cross-validation groups
-		testin = range(left,right)   # test indies
-		# training set indices
-		if(left==0):  # if we are in the first set
-				trainin = range(right,c1.n_samples)
-		elif(right==c1.n_samples):  # we are in the last set
-				trainin = range(0,left) 
-		else:  # otherwise
-				trainin = np.append(range(0,left),range(right,c1.n_samples))
-	#		print(testin, trainin)
-
-		x_test_shuffle = x_shuffle[testin]  # D_k into test set
-		x_train_shuffle = x_shuffle[trainin]  # rest into training set
-		y_test_shuffle = y_shuffle[testin]
-		y_train_shuffle = y_shuffle[trainin]
-		z_train_shuffle = z_shuffle[trainin]
-		z_test_shuffle = z_shuffle[testin]		
-	
-		in1 = indices[testin]	# choose test and train indices from the shuffled array
-		in2 = indices[trainin]
-		
-		in1_sorted = np.sort(in1)	# sort the test indices array
-		in1_order = np.argsort(in1)	# recod the sorting order
-		
-		in2_order = np.argsort(in2)
-				
-		c1_test, c1_train = can(), can()
-				
-		c1_test.x = x_test_shuffle[in1_order]	# sort the test and train separately
-		c1_test.os_status = y_test_shuffle[in1_order]	
-		c1_test.os_months = z_test_shuffle[in1_order]
-		c1_train.x = x_train_shuffle[in2_order]
-		c1_train.os_status = y_train_shuffle[in2_order]
-		c1_train.os_months = z_train_shuffle[in2_order]
-		
-		c1_test.n_samples, c1_test.n_c1_testgenes = c1_test.x.shape
-		c1_train.n_samples, c1_train.n_genes = c1_train.x.shape
-		c1_train.groups = c1.groups
-			
-		###########
-		
-		if (c1done==False):
-			beta_train, loss_train, nonzero, nonzerogr = GD(beta0[:,ii],c1_train,lam,gamma00)
-		else:
-			beta_train, nonzerogr = beta0[:,ii], np.arange(1,len(c1.pnames)+1) #np.arange(1,75)
-			nonzero = []
-
-		nonzgr.append(nonzerogr)	# keep a list of all nonzero groups
-		beta0new[:,ii] = beta_train	# will use it as initial data in the next step
-				
-		score_test = np.dot(c1_test.x,beta_train)#.flatten().astype(float)
-		score[in1_sorted] = score_test	
-		cav += 1/K*c_index(score_test,c1_test.os_status,c1_test.os_months)
-		print('Nonzeros: '+str(len(nonzero))+' in fold '+str(ii+1)+'/'+str(K))
-	return beta0new, nonzgr, score, cav
 ####################################################################################################
 def CV_lambda1(c1,K,lam,beta0,rseed,c1done,lr,method,epoch):
 #	nonzgr=[]	# collect nonzero groups for analysis
