@@ -10,7 +10,7 @@ import sys
 import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler
-
+###############################################################################
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 ###############################################################################
@@ -119,7 +119,6 @@ def prepare_data(cancer_types):
 			# check if genes correspond:
 			if ~(np.all(ca[cc].gnames == ca[cc2].gnames)):
 				raise ValueError('Gene lists do not coincide.')
-
 	
 	# count number of samples, genes; normalize
 	for cc in range(nc):
@@ -671,25 +670,6 @@ def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr):
 			c_train.append(c1_train_temp)
 			c_test.append(c1_test_temp)
 ############
-##		beta0 = np.zeros(n_genes)	# initiate beta to 0
-#		if np.abs(mu)<1e-9:   # no coupling
-##			gamma00 = 0.05
-##			gamma02 = 0.05
-##			beta_train, loss_train, nonzero, nonzerogr = GD(beta0[:,ii],x_train,y_train,z_train,lam,group,gamma0)
-##			beta_train2, loss_train2, nonzero2, nonzerogr2 = GD(beta02[:,ii],x_train2,y_train2,z_train2,lam2,group2,gamma02)
-##			if (c1done==False):
-#				beta_train, loss_train, nonzero, nonzerogr = GD(beta0[:,ii],c1_train,lam,gamma00)
-##			else:
-##				beta_train, loss_train, nonzero, nonzerogr = beta0[:,ii], 0, [], np.arange(1,75)
-##			if (c2done==False):
-#				beta_train2, loss_train2, nonzero2, nonzerogr2 = GD(beta02[:,ii],c2_train,lam2,gamma02)
-##			else:
-##				beta_train2, loss_train2, nonzero2, nonzerogr2 = beta02[:,ii], 0, [], np.arange(1,75)
-#		else: 
-##			beta_train, loss_train, nonzero, nonzerogr, beta_train2, loss_train2, nonzero2, nonzerogr2 = GD2(beta0[:,ii],x_train,y_train,z_train,lam,group, 
-##								CV_lambda_gen					  beta02[:,ii],x_train2,y_train2,z_train2,lam2,group2,mu)	# compute the best beta for the training set given lambda
-#		beta_train, loss_train, nonzero, nonzerogr, beta_train2, loss_train2, nonzero2, nonzerogr2 = GD2(beta0[:,ii],c1_train,lam,beta02[:,ii],c2_train,lam2,mu,alpha)	# compute the best beta for the training set given lambda
-#		beta_train, loss_train, nonzero, nonzerogr, beta_train2, loss_train2, nonzero2, nonzerogr2 = GD2(beta0_comp[0][:,ii],c_train[0],lamv[0],beta0_comp[1][:,ii],c_train[1],lamv[1],muv[0,1],alpha)	# compute the best beta for the training set given lambda
 		beta0_temp = [beta0_comp[cc][:,ii] for cc in range(nc)]
 		beta_train, nonzero, nonzerogr = GD_gen(beta0_temp,c_train,lamv,muv,alpha,method,lr)	# compute the best beta for the training set given lambda
 	
@@ -709,127 +689,41 @@ def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr):
 #		score[1][in1_sorted[1]] = score_test2
 
 	return beta0new, score, cav, nonz_len_av, nonzgr    
-####################################################################################################################
-def worker(procnum, return_dict, c1_copy,K,lam, beta0, rseed, c1done, gamma00, method, epoch):#gabainvar1, gabainvar2):
-#	beta0new, nonzgr ,score, cav = CV_lambda1(c1_copy,K,lam,beta0,rseed,c1done,gamma00) 
-	beta0new ,score, cav = CV_lambda1(c1_copy,K,lam,beta0,rseed,c1done,gamma00,method,epoch) 
-	
-	output = dict();
-#  output['gabaoutvar1'] = 17;
-#  output['gabaoutvar2'] = gabainvar1 + gabainvar2;
-	output['beta0new'] = beta0new;
-#	output['nonzgr'] = nonzgr;
-	output['score'] = score;
-	output['cav'] = cav;
-	return_dict[procnum] = output	
 ##################################################################################
 def CV1(c1,K,lamdata,beta0,rseed,gamma00,method,epoch):   # estimate goodness of fit
-	
-	import multiprocessing
- 
+
 	m1 = len(lamdata)
 	cdatanew = torch.zeros(m1)
-	cbest = 0
 	betabest = copy.deepcopy(beta0)
 	betabest_all = torch.zeros((m1,K,c1.n_genes))
 	c1_copy = copy.deepcopy(c1)
 	cav_v = torch.zeros(m1) # average c-index vector
-	lambest = 0
 	c1done = False
 	
-	if(False):   # multiprocessing
-		if __name__ == '__main__':
-			  manager = multiprocessing.Manager()
-			  return_dict = manager.dict()
-			  jobs = []
-			  for i in range(m1):
-				  p = multiprocessing.Process(target=worker, args=(i,return_dict, c1_copy,K,lamdata[i], beta0, rseed, c1done, gamma00,method,epoch))
-				  jobs.append(p)
-				  p.start()	
-			  for proc in jobs:
-				  proc.join()
-	#					  print( return_dict.values())
-	
-	#				  print(return_dict[4]['gabaoutvar2']);
-	#		  print('helloleo',return_dict[2]['cav'])
-			  for jj in range(m1):  
-				  cav = return_dict[jj]['cav']
-				  cav_v[jj] = cav
-#				  nonzgr = return_dict[jj]['nonzgr']
-				  score = return_dict[jj]['score']
-				  beta0new = return_dict[jj]['beta0new']
-					
-#				  avnel = np.sum([len(nonzgr[x]) for x in range(len(nonzgr))])/len(nonzgr)  # average number of groups
-				  if warmstart == True:
-					  beta0 = copy.copy(beta0new)   # warm start
-				  ctemp = c_index(score,c1.os_status,c1.os_months)
-				  cdatanew[jj] = ctemp
-#				  if (avnel > maxgroup): # stop if max nr of groups reached
-#					  c1done = True
-				  if (cont == 'best'):   # select best values
-#					  if (ctemp > cbest) and (avnel < maxgroup):
-					  if (cav > cbest):					  
-						  cbest = copy.copy(cav)
-						  lambest = copy.copy(lamdata[jj])
-						  betabest = copy.copy(beta0new)      
-				  elif (cont == 'last'):# select fixed (=last) value
-					  cbest = copy.copy(cav)
-					  lambest = copy.copy(lamdata[jj])
-					  betabest = copy.copy(beta0new)
-				  print(cbest,lambest)
-	else:
-	
-		for jj in range(m1):
-			lam = lamdata[jj]	# current lambda
-			print('Lambda = '+str(lam)+' : '+str(jj+1)+' / '+str(m1))
-			if (K==1):
-	#			betabest, loss_train, nonzero, nonzgr = GD(beta0,c1_copy,lam,gamma00)  # pbbly needs torch fix
-				retrn = GD(method,gamma00,beta0,c1_copy,lam,epoch)
-				betabest = retrn.beta;
-				betabest_all[jj,0,:] = betabest;
-				cav_v = 0
-				cbest = 0
-				lambest = 0
-				cdatanew = 0 # only for 1 point
-			else:		  
-				beta0new ,score, cav = CV_lambda1(c1_copy,K,lam,beta0,rseed,c1done,gamma00,method,epoch) 
-				cav_v[jj] = cav
-				print('c-index = '+str(cav))
-				for kkk in range(K):
-					betabest_all[jj,kkk,:] = beta0new[:,kkk]
-	#			avnel = torch.sum([len(nonzgr[x]) for x in range(len(nonzgr))])/len(nonzgr)  # average number of groups
-				if warmstart == True:
-					beta0 = copy.copy(beta0new)   # warm start
-				ctemp = c_index(score,c1.os_status,c1.os_months)
-				cdatanew[jj] = ctemp
-	#			if (avnel > maxgroup): # stop if max nr of groups reached
-	#				c1done = True
-#				if (cont == 'best'):   # select best values
-#					if (cav > cbest): # and (avnel < maxgroup):
-#						cbest = copy.copy(cav)
-#						lambest = copy.copy(lam)
-#						betabest = copy.copy(beta0new)      
-#				elif (cont == 'last'):# select fixed (=last) value
-#					cbest = copy.copy(cav)
-#					lambest = copy.copy(lam)
-#					betabest = copy.copy(beta0new)
-#				print(cbest,lambest)
-
-#	mtplt.rcParams.update({'font.size': 14})
-#	plt.plot(np.log(lamdata), cdatanew.flatten(),'o-')
-#	plt.plot(np.log(lambest),cbest,'s',color='yellowgreen')
-#	plt.title(c1.name+" c-index: independent")
-#	plt.xlabel('lambda')
-#	plt.ylabel('C-index')
-##	plt.savefig(c1.name+'_single.pdf')
-#	plt.show()
+	for jj in range(m1):
+		lam = lamdata[jj]	# current lambda
+		print('Lambda = '+str(lam)+' : '+str(jj+1)+' / '+str(m1))
+		if (K==1):
+			retrn = GD(method,gamma00,beta0,c1_copy,lam,epoch)
+			betabest = retrn.beta;
+			betabest_all[jj,0,:] = betabest;
+			cav_v = 0
+			cdatanew = 0 # only for 1 point
+		else:		  
+			beta0new ,score, cav = CV_lambda1(c1_copy,K,lam,beta0,rseed,c1done,gamma00,method,epoch) 
+			cav_v[jj] = cav
+			print('c-index = '+str(cav))
+			for kkk in range(K):
+				betabest_all[jj,kkk,:] = beta0new[:,kkk]
+#			avnel = torch.sum([len(nonzgr[x]) for x in range(len(nonzgr))])/len(nonzgr)  # average number of groups
+			if warmstart == True:
+				beta0 = copy.copy(beta0new)   # warm start
+			ctemp = c_index(score,c1.os_status,c1.os_months)
+			cdatanew[jj] = ctemp
 
 	retrn = ret()
 	retrn.cval = cdatanew
-#	retrn.lambest, retrn.cbest =  lambest, cbest
-#	retrn.beta = betabest
-	retrn.cav_v, retrn.beta_v = cav_v, betabest_all
-#	return cdatanew, lambest, cbest, betabest, cav_v, betabest_all           
+	retrn.cav_v, retrn.beta_v = cav_v, betabest_all         
 	return retrn
 ####################################################################################################################
 def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # estimate goodness of fit
@@ -837,40 +731,26 @@ def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # est
 	m = len(lam_comp) # nr of parameter combinations
 	cdatanew = np.zeros((m,nc))
 	cavm = np.zeros([m,nc])
-#	cbest = np.zeros((nc))
-#	betabest, betabest2 = copy.copy(beta0), copy.copy(beta02)
-#	betabest = copy.copy(beta0_comp)
 	betabest = []
 	nonz_len_av_v = np.zeros([nc,m])
 	nonzgr_v = [[] for jj in range(m)]   # selected groups for all points
-#	lambest, lambest2 = 0, 0
-#	lambest = np.zeros((nc))
 	for jj in range(m):
 		cav = np.zeros([nc])
 		c_train = copy.deepcopy(ca) # otherwise it gets overwritten
-#		lam, lam2, mu = lamdata[jj], lamdata2[jj], mudata[jj]	# current lambda, mu
-#		lamv = np.array([lam_comp[kk][jj] for kk in range(len(lam_comp))])  # vector of sample lambdas
-#		muv = np.array([mu_comp[kk][jj] for kk in range(len(mu_comp))])  # vector of sample mu:s
 		lamv = lam_comp[jj]
 		muv = mu_comp[jj]
 		print('Lambda = '+str(lamv)+' : '+str(jj+1)+' / '+str(m), 'Mu = '+str(muv)+' : '+str(jj+1)+' / '+str(m))
 		if torch.all(muv==0):
 			beta0new = [[] for cc in range(nc)]
 			for cc in range(nc):
-#				cinddata1, lambest1, cbest1, betabest1, cav[cc], forget = CV1(ca[cc],K,np.array([lamv[cc]]),beta0_comp[cc],rseed,gamma0[cc],method)
 				retrn = CV1(ca[cc],K,np.array([lamv[cc]]),beta0_comp[cc],rseed,gamma0[cc],method,epoch)
-#				beta0new[cc] = betabest1
 				beta0new[cc] = retrn.beta
 		else:		
 			if (K==1):
-	#			beta0_temp = [beta0_comp[cc] for cc in range(nc)]
 				beta0new, nonzero, nonzerogr = GD_gen(beta0_comp,c_train,lamv,muv,alphadata,method,lr)	# compute the best beta for the training set given lambda
 				score = []
 				nonz_len_av = np.zeros(nc)
 				for cc in range(nc):
-	#				ns_temp = ca[cc].n_samples  # nr of samples
-	#				score.append(np.zeros(ns_temp))  # store the score	
-	#			for cc in range(nc):	
 					score_test = np.dot(ca[cc].x,beta0new[cc])#.flatten().astype(float)
 					score.append(score_test)
 					nonz_len_av[cc] = len(nonzero[cc])
@@ -880,14 +760,11 @@ def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # est
 			for cc in range(nc):
 				ctemp = c_index(score[cc],ca[cc].os_status,ca[cc].os_months)
 				nonz_len_av_v[cc,jj] = nonz_len_av[cc]
-	#		ctemp2 = c_index(score2,c2.os_status,c2.os_months)
 				cdatanew[jj,cc] = ctemp
 			nonzgr_v[jj].append(nonzgr)
 		cavm[jj,:] = cav  # averaged C-value
 		betabest.append(beta0new)
-		print(cav)
-#		cdatanew2[jj] = ctemp2
-#	return cdatanew[:,0], lambest, cbest, betabest, cdatanew[:,1], lambest2, cbest2, betabest2                    
+		print(cav)                 
 	return cdatanew, betabest, cavm, nonz_len_av_v, nonzgr_v
 ######################################################################################
 def group_overlapp(gnames,gnames2):		# find which genes to remove to obtain identical sets
@@ -1145,8 +1022,9 @@ class ret( object ):   # create class to hold return variables
 # download and prepare data
 
 #cancers = [['luad','stad'],['coadread','stad']]
-cancers = [['toy1','toy2']]
+#cancers = [['toy1','toy2']]
 #cancers = [['ov','paad']]
+cancers = [['toy_luad','toy_paad']]
 
 for cancers_type in cancers:
 	
@@ -1154,19 +1032,17 @@ for cancers_type in cancers:
 	################ collect all parameters ###############################################
 	#maxgroup = 30  # max nr of pathways selected
 	warmstart = False #True
-	visualisation = False
+	visualisation = True #False
 	
 	#gamma0_multi = [gamma00]
 	
 	## single parameter search: boundaries
 	K1 = 10#3#2 # 5 #10  # nr of cross-validation folds # in single parameter search
-	#rseeddata = np.array([264])#,264,265,266,267])   # how many repetitions to find boundaries
-	##reg = '3b'  # 3a = 3 with papers'd, 3b = 3 correlation mine, 1 = simple mine
 	reg = '22' # '12', '11' # '7' #'10' #'1' # '9' # '13' # '16'
 	
 	## define parameter sets
 	#sigma = 0.02   # normal distribution variance
-	rpoints = 2#30#30#30 #30 #50   # nr of random points
+	rpoints = 30#30#30#30 #30 #50   # nr of random points
 	
 	# select best
 	nrv = 1#30 #5#30#20#20#1#5 #5 #5 # 20  # how many validation sets
@@ -1178,7 +1054,7 @@ for cancers_type in cancers:
 	linpoints = 10#5#3#5 #10		# if stat = single, nr of steps between min and max lambda
 	
 	method = 'Adam' #'SGD' # Adam #'MyGD' # 'Rprop' # 'ASGD'
-	epoch = 200  #  change in GD! max nr of epochs
+	epoch = 200  # max nr of epochs
 	#lr = 0.002
 	lr = np.min(gamma0)#0.0001
 	
@@ -1186,18 +1062,13 @@ for cancers_type in cancers:
 	### create can classes
 	#####################################################################################################
 	#
-	#cancers_type = ['brca','ov']
 	if not (cancers_type == ['toy1','toy2']):
 		nc = len(cancers_type)  # nr of cancers
 		ca = prepare_data(cancers_type)  # load, log and trim the data
 	else:
 		nc = 2
-		#gamma0 = [gamma00, gamma00]
-#		cancers_type = ['toy1','toy2']
-		#gamma0 = [0.002,0.002]
 		ca = [can(), can()]
-		#n_genes = 100
-		n_genes = 10000
+		n_genes = 10000  # number of genes
 		imp1 = 500 # nr of important genes of can1
 		imp2 = 300 # nr of important genes can2
 		#ca[0], beta1 = toy(n_genes,50,46,[0,1,2,3,4],np.ones(5))#,[1,2,1,1,1])
@@ -1554,6 +1425,29 @@ for cancers_type in cancers:
 					plt.xlabel('covariate')
 					plt.ylabel('beta')
 					plt.savefig('single'+str(cancers_type[cc])+'.pdf')
+					plt.show()
+					
+					# boxplot single
+					beg = 0   # plot begin pointer
+					colors = []
+					for jj in range(len(glist_orig)):
+						jjj = jj #sortind[jj] # sorted
+						if (np.linalg.norm(betabest_single[cc][glist_orig[jjj]]) > 1e-5):
+							c = cmap(jj/ng)
+#							plt.plot(np.arange(beg,beg+len(glist_orig[jjj])),np.sort(betabest_final[cc][glist_orig[jjj]]),'*', \
+#							color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
+							bplot = plt.boxplot(betabest_single[cc][glist_orig[jjj]], positions = [beg], labels = [jjj+1], patch_artist=True,\
+									boxprops=dict(facecolor=c, color=c))#,	color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
+#							beg += 500+len(glist_orig[jjj])    # shift beginning with lengh of the pathway
+		#					aas.append(ca[0].pnames[jj][0][0:10])  # first 10 chars
+							beg+=1;
+					plt.title('Single '+str(cancers_type[cc])+', lam = '+str(np.around(lam_cv_single[cc].numpy(),2)))#, mu = '+str(np.around(mu_cv_single[1][0][1].numpy(),2)))
+					plt.xlabel('pathway')
+					plt.ylabel('beta')
+		#			nclm = np.floor(len(aas)/10).astype(int)  # how many columns do we need
+		#			plt.xlim([None,ca[0].n_genes+12000*nclm])   # shift the plot so that we have space for labels
+		#			plt.legend(aas, ncol=nclm)
+					plt.savefig('single_'+str(cancers_type[0])+'_'+str(cancers_type[1])+'_'+str(cc)+'_boxplot.pdf')
 					plt.show()
 					
 	#				aas = []  # legend placeholder
