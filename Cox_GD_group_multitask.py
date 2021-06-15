@@ -123,7 +123,7 @@ def prepare_data(cancer_types):
 	# count number of samples, genes; normalize
 	for cc in range(nc):
 		ca[cc].n_samples, ca[cc].n_genes = ca[cc].x.shape
-		ca[cc].x = np.log(ca[cc].x + 1) # log to make it biologically more relevant
+#		ca[cc].x = np.log(ca[cc].x + 1) # log to make it biologically more relevant  # bring BACK!
 		ca[cc].x = npstnd(ca[cc].x)
 		ca[cc].x = torch.from_numpy(ca[cc].x)
 		
@@ -376,14 +376,14 @@ def GD(method,lr,beta0,c1,lam,epoch):#,*args):
 	retrn.beta, retrn.loss = beta.clone().detach(), loss
 	return(retrn)
 #############################################################################
-def GD_gen(beta0_comp,ca,lamv,muv,alpha,method,lr)	:
+def GD_gen(beta0_comp,ca,lamv,muv,method,lr,kmax)	:
 	loss_delta = 100	# initiate pga stopping criteria
 	loss_old = 100 # initialize to something silly
 	incr = 100   # initiate increment to something silly
 	tol = 1e-6  # tolerance
 	tol2 = 1e-3 # tolerance settin beta to 0
 	kk = 0 	# initiate interation nr
-	kmax = 300	# max number of iterations
+#	kmax = 300	# max number of iterations
 	nc = len(ca)  # nr of cancers
 #	beta_fin = copy.deepcopy(beta0_comp)	# store forever
 #	beta_fin_old = copy.deepcopy(beta0_comp)
@@ -587,7 +587,7 @@ def CV_lambda1(c1,K,lam,beta0,rseed,c1done,lr,method,epoch):
 #		print('Nonzeros: '+str(len(nonzero))+' in fold '+str(ii+1)+'/'+str(K))
 	return beta0new, score, cav
 ##############################################################################################################		
-def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr):
+def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,method,lr,epoch):
 	nc = len(ca)  # nr of cancers
 	n_samples, score, indices, x_shuffle, y_shuffle, z_shuffle = [],[],[],[],[],[]
 	borders, beta0new = [],[]
@@ -611,7 +611,6 @@ def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr):
 
 	for ii in range(K):
 		testin, trainin, c_train, c_test, in1_sorted = [],[],[],[],[]
-		alpha = alphadata[ii]
 		for cc in range(nc):
 #		print('Fold '+str(ii+1)+' out of '+str(K))
 
@@ -671,7 +670,7 @@ def CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr):
 			c_test.append(c1_test_temp)
 ############
 		beta0_temp = [beta0_comp[cc][:,ii] for cc in range(nc)]
-		beta_train, nonzero, nonzerogr = GD_gen(beta0_temp,c_train,lamv,muv,alpha,method,lr)	# compute the best beta for the training set given lambda
+		beta_train, nonzero, nonzerogr = GD_gen(beta0_temp,c_train,lamv,muv,method,lr,epoch)	# compute the best beta for the training set given lambda
 	
 		for cc in range(nc):	
 			beta0new[cc][:,ii] = beta_train[cc]
@@ -726,7 +725,7 @@ def CV1(c1,K,lamdata,beta0,rseed,gamma00,method,epoch):   # estimate goodness of
 	retrn.cav_v, retrn.beta_v = cav_v, betabest_all         
 	return retrn
 ####################################################################################################################
-def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # estimate goodness of fit
+def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,method,lr,epoch):   # estimate goodness of fit
 	nc = len(ca)  # nr of cancers
 	m = len(lam_comp) # nr of parameter combinations
 	cdatanew = np.zeros((m,nc))
@@ -747,7 +746,7 @@ def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # est
 				beta0new[cc] = retrn.beta
 		else:		
 			if (K==1):
-				beta0new, nonzero, nonzerogr = GD_gen(beta0_comp,c_train,lamv,muv,alphadata,method,lr)	# compute the best beta for the training set given lambda
+				beta0new, nonzero, nonzerogr = GD_gen(beta0_comp,c_train,lamv,muv,method,lr,epoch)	# compute the best beta for the training set given lambda
 				score = []
 				nonz_len_av = np.zeros(nc)
 				for cc in range(nc):
@@ -756,7 +755,7 @@ def CV_rand(ca,K,lam_comp,beta0_comp,mu_comp,rseed,alphadata,method,lr):   # est
 					nonz_len_av[cc] = len(nonzero[cc])
 					nonzgr = copy.copy(nonzero)
 			else:
-				beta0new, score, cav, nonz_len_av, nonzgr = CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,alphadata,method,lr)				
+				beta0new, score, cav, nonz_len_av, nonzgr = CV_lambda_gen(ca,K,lamv,beta0_comp,rseed,muv,method,lr,epoch)				
 			for cc in range(nc):
 				ctemp = c_index(score[cc],ca[cc].os_status,ca[cc].os_months)
 				nonz_len_av_v[cc,jj] = nonz_len_av[cc]
@@ -893,29 +892,19 @@ def corr_av(bigvec):  # correlation coefficient
 ###################################################################################
 def ldata(rpoints,nc,lammi,lamma,lambest0):   # generate lambda data
 	lamdata_rand = [[] for ii in range(rpoints)]
-	epsilon = 0 #0.005
 	sigma = 0.005
-#	sigma = 0.1
-#	sigma = 0.2
 	for jj in range(rpoints):
 		for cc in range(nc):
 			notdone_temp = True
-#			sigma = 1/4*np.max((lamma[cc]-lambest0[cc],lambest0[cc]-lammi[cc]))
-#			sigma = 0.005
 			while notdone_temp:
 				temp = np.random.normal(lambest0[cc], sigma,1)  # random normal distribution
-				if ((temp[0]>lammi[cc]-epsilon) and (temp[0]<lamma[cc])):  # if inbetween boundaries
-#				if ((temp[0]>lammi[cc]) and (temp[0]<lamma[cc])):  # if inbetween boundaries
-#				if ((temp[0]<lamma[cc]) and (temp[0]>0)):  # if inbetween boundaries
+				if ((temp[0]>lammi[cc]) and (temp[0]<lamma[cc])):  # if inbetween boundaries
 					lamdata_rand[jj].append(temp[0])
-#					lamdata_rand[jj].append(lambest0[cc])
 					notdone_temp = False
 	return lamdata_rand
 ###################################################################################
 def mdata(rpoints,nc,lambest0):   # generate mu data: random
 	ii = 0
-#	hdata = [1e-5*2**ii for ii in range(rpoints)]
-#	mu_max = np.max(lambest0)
 	mu_max = .5 #1/2;
 	mudata_rand = []
 	while ii<rpoints:
@@ -923,11 +912,9 @@ def mdata(rpoints,nc,lambest0):   # generate mu data: random
 		for ll in range(nc):
 			for kk in range(ll+1,nc):
 				ttemp = -10 # initiate to stng funny
-##				while ((ttemp<0) or (ttemp>mu_max[ll,kk])): # until within boundaries
 				while ((ttemp<0) or (ttemp>mu_max)): # until within boundaries
 					ttemp = np.abs(np.random.normal(0,mu_max/3,1)) # random normal dist
 				mu_temp[ll,kk] = ttemp;
-#				mu_temp[ll,kk] = hdata[ii]
 		mudata_rand.append(torch.from_numpy(mu_temp))
 		ii+=1
 	return mudata_rand
@@ -935,22 +922,12 @@ def mdata(rpoints,nc,lambest0):   # generate mu data: random
 ###################################################################################
 def mdata_reg(rpoints,nc,mmin,mmax):   # generate mu data: equispaced
 	ii = 0
-#	hdata = [1e-2*2**ii for ii in range(rpoints)]
-#	hdata = grid(1e-2,50,rpoints,'log')
-#	hdata = grid(1e-3,1,rpoints,'log')
 	hdata = grid(mmin,mmax,rpoints,'log')
-#	mu_max = np.max(lambest0)
-#	mu_max = .5 #1/2;
 	mudata_rand = []
 	while ii<rpoints:
 		mu_temp = np.zeros([nc,nc])
 		for ll in range(nc):
 			for kk in range(ll+1,nc):
-#				ttemp = -10 # initiate to stng funny
-###				while ((ttemp<0) or (ttemp>mu_max[ll,kk])): # until within boundaries
-#				while ((ttemp<0) or (ttemp>mu_max)): # until within boundaries
-#					ttemp = np.abs(np.random.normal(0,mu_max/3,1)) # random normal dist
-##				mu_temp[ll,kk] = ttemp;
 				mu_temp[ll,kk] = hdata[ii]
 		mudata_rand.append(torch.from_numpy(mu_temp))
 		ii+=1
@@ -1028,34 +1005,31 @@ cancers = [['toy_luad','toy_paad']]
 
 for cancers_type in cancers:
 	
-	gamma0 = [0.0001,0.0001]  # learning rates
+#	gamma0 = [0.0001,0.0001]  # learning rates
+	gamma0 = [0.0005,0.0005]  # learning rates
 	################ collect all parameters ###############################################
-	#maxgroup = 30  # max nr of pathways selected
-	warmstart = False #True
-	visualisation = True #False
-	
-	#gamma0_multi = [gamma00]
-	
+	warmstart = False #True  # in 1D case
+	visualisation = True #False  # visualise betas for 2 cancers
+		
 	## single parameter search: boundaries
 	K1 = 10#3#2 # 5 #10  # nr of cross-validation folds # in single parameter search
 	reg = '22' # '12', '11' # '7' #'10' #'1' # '9' # '13' # '16'
 	
 	## define parameter sets
-	#sigma = 0.02   # normal distribution variance
 	rpoints = 30#30#30#30 #30 #50   # nr of random points
 	
 	# select best
-	nrv = 1#30 #5#30#20#20#1#5 #5 #5 # 20  # how many validation sets
+	nrv = 5#30 #5#30#20#20#1#5 #5 #5 # 20  # how many validation sets
 	nk = 1#2#3#1#3 #3 # 3 # nk CV repeats
 	rseeddata2 = np.array([60])+np.reshape(np.arange(nk*nrv),[nk,nrv]) #np.array([42])+np.reshape(np.arange(nk*nrv),[nk,nrv])
 	rseeddata_val = np.arange(242,242+nrv)
 	rseed_test_data = np.arange(500, 500 + nrv)   # initial data for testing
+	
 	K2 = 10#5 # 5 to choose best lambda + multitask CV+ single CV
 	linpoints = 10#5#3#5 #10		# if stat = single, nr of steps between min and max lambda
 	
-	method = 'Adam' #'SGD' # Adam #'MyGD' # 'Rprop' # 'ASGD'
-	epoch = 200  # max nr of epochs
-	#lr = 0.002
+	method = 'Adam' #'SGD' # Adam # 'Rprop' # 'ASGD'
+	epoch = 300  # max nr of epochs
 	lr = np.min(gamma0)#0.0001
 	
 	#####################################################################################################
@@ -1071,34 +1045,17 @@ for cancers_type in cancers:
 		n_genes = 10000  # number of genes
 		imp1 = 500 # nr of important genes of can1
 		imp2 = 300 # nr of important genes can2
-		#ca[0], beta1 = toy(n_genes,50,46,[0,1,2,3,4],np.ones(5))#,[1,2,1,1,1])
-		#ca[1], beta2 = toy(n_genes,20,47,[0,1,2,3,4],[1,1,1,1,1])
-		#ca[0], beta1 = toy(n_genes,50,46,np.arange(10),np.ones(10))#,[1,2,1,1,1])
-		#ca[1], beta2 = toy(n_genes,20,53,np.arange(5),np.ones(5))
 		ca[0], beta1 = toy(n_genes,1000,47,np.arange(imp1),np.ones(imp1))#,[1,2,1,1,1])
 		ca[1], beta2 = toy(n_genes,300,54,np.arange(imp2),np.ones(imp2))
-		#ca[0].groups = np.arange(100)
-		#ca[1].groups = np.arange(100)
-		#gr = np.arange(n_genes)
-		#gr[0:5] = 0
-		#gr[5:10] = 1
-		#gr = np.floor(np.arange(n_genes)/5)
 		gr = np.floor(np.arange(n_genes)/100)
-		#gr[2] = 0
 		ca[0].groups = gr
 		ca[1].groups = gr
 	
-	cont = 'best'#'last' # last OR best # alt best giving best possible lambda or mu this one is fixed to last value
-	alphadata = np.ones(K1)
 	npar = nc + nc**2  # nr of parameters in total lambda + mu^2
 	parsel = np.zeros([nc,nrv,npar])  # save final selected parameters
 	beta_single_vec = np.zeros([nc,nrv,ca[0].n_genes])  # save final betas
 	beta_multi_vec = np.zeros([nc,nrv,ca[0].n_genes])  # save final betas
 			
-	#if warmstart==False:   # choose initial step size
-	#	gamma0_multi = np.max(gamma0) # 0.05
-	#else:
-	#	gamma0_multi = 0.005  # if warm starts, step length can be smaller	
 	#############################################################################################
 	#### NESTED CV ##############################################################################
 	#############################################################################################
@@ -1106,7 +1063,6 @@ for cancers_type in cancers:
 	nr = len(rseeddata2)   # nr of repeats
 	cval_vec_multi = np.zeros([nc,nrv]) # save all validation set results
 	cval_vec_single = np.zeros([nc,nrv]) # save all validation set results
-	ratio_train, ratio_val = np.zeros(nrv), np.zeros(nrv)  # ratio event/number
 	
 	for nn in range(nrv):
 		allpar_val = [np.zeros([nc,rpoints]) for ii in range(nr)]	  # save c-values for all parameters
@@ -1120,49 +1076,16 @@ for cancers_type in cancers:
 		###############################################################################
 		cbest0, lambest0, lammi, lamma = np.zeros(nc), np.zeros(nc), np.zeros(nc), np.zeros(nc)
 		lamall = np.zeros([nc,linpoints])
-		if ((method == "MyGD") and (nr > 1)): # if ore than one repeat
-	#		cbest0, lambest0, lammi, lamma = np.zeros(nc), np.zeros(nc), np.zeros(nc), np.zeros(nc)
-	#		lamall = np.zeros([nc,linpoints])
+		if (nr > 1):  # save one computation by recycling the old results
 			for cc in range(nc):
 				xdif = lam0(ca_train[cc])
-				eps = 0.1 # 0.1
-				lammax = np.max([np.abs(np.max(xdif)),np.abs(np.min(xdif))])# 0.05 #ov 0.3  #, brca 0.05 # 0.04 prad, paad 0.3
-				lammin = eps*lammax #0.005
-	#			m1 = 10		# nr of steps between min and max lambda
-				lamdata = grid(lammin,lammax,linpoints,'log')
-				beta0 = np.zeros((ca_train[cc].n_genes,K1))	# initialize beta to 0
-				cinddata1, lambest1, cbest1, betabest1, cav_v, forget = CV1(ca_train[cc],K1,lamdata,beta0,rseed_val,gamma0[cc])  # mu=0
-				cbest0[cc] = cbest1
-				lambest0[cc] = lambest1
-				lammi[cc], lamma[cc] = lamminmax(cinddata1.flatten(),lamdata)
-				lamall[cc,:] = lamdata
-		##		
-			lamdata_rand = ldata(rpoints,nc,lammi,lamma,lambest0)   # produce random lambda set within boundaries
-			mudata_rand = mdata(rpoints,nc,lambest0)  # random mu samples between 0 and 3
-		#	
-	#	ratio_train[nn] = np.sum(ca_train[0].os_status)/len(ca_train[0].os_status)
-	#	ratio_val[nn] = np.sum(ca_val[0].os_status)/len(ca_val[0].os_status)
-		
-		elif (nr > 1):
-	#		cbest0, lambest0, lammi, lamma = np.zeros(nc), np.zeros(nc), np.zeros(nc), np.zeros(nc)
-	#		lamall = np.zeros([nc,linpoints])
-			for cc in range(nc):
-				xdif = lam0(ca_train[cc])
-				eps = 0.1 # 0.1
 				lammax = np.max([torch.abs(torch.max(xdif)),torch.abs(torch.min(xdif))])# 0.05 #ov 0.3  #, brca 0.05 # 0.04 prad, paad 0.3
-				lammin = eps*lammax #0.005
-	#			m1 = 10		# nr of steps between min and max lambda
+				lammin = 0.1*lammax #0.005
 				lamdata = grid(lammin,lammax,linpoints,'log')
-	#			beta0 = torch.zeros((ca_train[cc].n_genes,K1))	# initialize beta to 0
-	#			torch.manual_seed(0)
-				torch.manual_seed(rseed_val)
-				beta0 = 0.001*torch.rand(ca_train[cc].n_genes,K1)	# initialize beta to 0
-	#			cinddata1, lambest1, cbest1, betabest1, cav_v, forget = CV1(ca_train[cc],K1,lamdata,beta0,rseed_val,gamma0[cc])  # mu=0
+
+				torch.manual_seed(rseed_val)  # set random seed
+				beta0 = 0.001*torch.rand(ca_train[cc].n_genes,K1)	# initialize beta to random small
 				retrn = CV1(ca_train[cc],K1,lamdata,beta0,rseed_val,gamma0[cc],method,epoch)  # mu=0
-	#			cbest0[cc] = cbest1
-	#			lambest0[cc] = lambest1
-	#			cbest0[cc] = retrn.cbest
-	#			lambest0[cc] = retrn.lambest
 				cbest0[cc] = torch.max(retrn.cav_v)
 				lambest0[cc] = lamdata[torch.argmax(retrn.cav_v)]
 				lammi[cc], lamma[cc] = lamminmax(retrn.cav_v.flatten(),lamdata)
@@ -1205,41 +1128,24 @@ for cancers_type in cancers:
 			
 		allpar_av_multi = [np.zeros([nc,rpoints]) for ii in range(nr)]	  # save c-values for all parameters
 		allpar_av_single = [np.zeros([nc,linpoints]) for ii in range(nr)]	  # save c-values for all parameters
-	#	beta_multi = np.zeros((nc,rpoints,ca_train[cc].n_genes))	# initialize beta to 0
-	#	beta_single = np.zeros((nc,linpoints,ca_train[cc].n_genes))	# initialize beta to 0
-		beta_multi = torch.zeros((nc,rpoints,ca_train[0].n_genes))	# initialize beta to 0
-		beta_single = torch.zeros((nc,linpoints,ca_train[0].n_genes))	# initialize beta to 0
 		for kk in range(nr): # do an average over nr runs
 			# random samples to determine the best combinations
 			rseed = rseeddata2[kk,nn]
 		################################################################################
-	#		tic()
 			## multitasking
-			alphadata = np.ones(K2)
 			# initial data
 			if K2==1:
 				beta0new = [np.zeros((ca_train[cc].n_genes,K2)).flatten() for cc in range(nc)]	# initialize beta to 0
 			else:
-	#			beta0new = [np.zeros((ca_train[cc].n_genes,K2)) for cc in range(nc)]	# initialize beta to 0
-	#			torch.manual_seed(1)
 				torch.manual_seed(rseed)
-				beta0new = [0.001*torch.rand(ca_train[cc].n_genes,K2) for cc in range(nc)]	# initialize beta to 0
-	#			beta0new = [torch.from_numpy(np.tile(0.0001*beta1.astype('float32')[:,np.newaxis],(1,K2))),torch.from_numpy(np.tile(0.001*beta2.astype('float32')[:,np.newaxis],(1,K2)))]	# initialize beta to 0
+				beta0new = [0.001*torch.rand(ca_train[cc].n_genes,K2) for cc in range(nc)]	# initialize beta to small random
 	################################################################################
 			# compare to best single run
-	#		if nr == 1:  # only one run
-	#			cbest0, lambest0, lammi, lamma = np.zeros(nc), np.zeros(nc), np.zeros(nc), np.zeros(nc)
-	#			lamall = np.zeros([nc,linpoints])
 			for cc in range(nc):  # single runs to find best c-values with given best hyperparameters
-	#			beta0 = np.zeros((ca_train[cc].n_genes,K2))	# initialize beta to 0
-	#			beta0 = 0.001*torch.rand(ca_train[cc].n_genes,K2)	# initialize beta to 0
-	#			cinddata1, lambest1, cbest1, betabest1,cav_v, betabest1_all = CV1(ca_train[cc],K2,lamall[cc,:],beta0,rseed,gamma0[cc])  # mu=0
 				if nr == 1:  # only one repeat
 					xdif = lam0(ca_train[cc])
-					eps = 0.1 # 0.1
 					lammax = np.max([torch.abs(torch.max(xdif)),torch.abs(torch.min(xdif))])# 0.05 #ov 0.3  #, brca 0.05 # 0.04 prad, paad 0.3
-					lammin = eps*lammax #0.005
-		#			m1 = 10		# nr of steps between min and max lambda
+					lammin = 0.1*lammax #0.005
 					lamdata = grid(lammin,lammax,linpoints,'log')
 					lamall[cc,:] = lamdata
 				retrn = CV1(ca_train[cc],K2,lamall[cc,:],beta0new[cc],rseed,gamma0[cc],method,epoch)  # mu=0
@@ -1248,44 +1154,32 @@ for cancers_type in cancers:
 					lambest0[cc] = lamdata[torch.argmax(retrn.cav_v)]
 					lammi[cc], lamma[cc] = lamminmax(retrn.cav_v.flatten(),lamdata)	
 	#####				
-	#			allpar_av_single[kk][cc,:] = cav_v
 				allpar_av_single[kk][cc,:] = retrn.cav_v
-	#			for kkk in range(K2):
-	#				for mn in range(linpoints):
-	##					beta_single[cc,mn,:] += 1/K2/nr*betabest1_all[mn,kkk,:]
-	#					beta_single[cc,mn,:] += 1/K2/nr*retrn.beta_v[mn,kkk,:]
+
 			lamdata_rand = ldata(rpoints,nc,lammi,lamma,lambest0)   # produce random lambda set within boundaries
 			mudata_rand = mdata(rpoints,nc,lambest0)  # random mu samples between 0 and 3
 				
 	################################################################################			
 			# multi
-			cinddata, betabest, cavm, nonz_len_av_v, nonzgr_v = CV_rand(ca_train,K2,lamdata_rand,beta0new,mudata_rand,rseed,alphadata,method,lr)  # mu=0
-	#		toc()
+			cinddata, betabest, cavm, nonz_len_av_v, nonzgr_v = CV_rand(ca_train,K2,lamdata_rand,beta0new,mudata_rand,rseed,method,lr,epoch)  # mu=0
 			for cc in range(nc):
 						allpar_av_multi[kk][cc] = cavm[:,cc]		
 	#	###########################################################################
 		allpar_weight_av_multi = np.zeros([nc,rpoints])  # select the most upvoted parameter set # in use
-	#	allpar_weight_av_multi = torch.zeros([nc,rpoints])  # select the most upvoted parameter set # in use		
 		for mn in range(rpoints): # in uselam_cv # in use
 			for cc in range(nc):
 				ctemp_av = np.zeros(nr)
-	#			ctemp_av = torch.zeros(nr)
 				for kk in range(nr):
 					ctemp_av[kk] = allpar_av_multi[kk][cc][mn]  # use
 				allpar_weight_av_multi[cc,mn] = np.sum(ctemp_av)
-	#			allpar_weight_av_multi[cc,mn] = torch.sum(ctemp_av)
 	
 		allpar_weight_av_single = np.zeros([nc,linpoints])  # select the most upvoted parameter set # in use
-	#	allpar_weight_av_single = torch.zeros([nc,linpoints])  # select the most upvoted parameter set # in use			
 		for mn in range(linpoints): # in uselam_cv # in use
 			for cc in range(nc):
 				ctemp_av = np.zeros(nr)
 				for kk in range(nr):
 					ctemp_av[kk] = allpar_av_single[kk][cc][mn]  # use
 				allpar_weight_av_single[cc,mn] = np.sum(ctemp_av)
-	#			allpar_weight_av_single[cc,mn] = torch.sum(ctemp_av)
-	#	lam_cv_multi, mu_cv_multi = [np.zeros(nc) for cc in range(nc)], [np.zeros([nc,nc]) for cc in range(nc)]  # initiate CV lambda, mu # in use
-	#	lam_cv_single = np.zeros(nc) # initiate CV lambda, mu  # in use2
 		lam_cv_multi, mu_cv_multi = [torch.zeros(nc) for cc in range(nc)], [torch.zeros([nc,nc]) for cc in range(nc)]  # initiate CV lambda, mu # in use
 		lam_cv_single = torch.zeros(nc) # initiate CV lambda, mu  # in use2
 	
@@ -1365,8 +1259,6 @@ for cancers_type in cancers:
 	##### VALIDATION SET	
 		K=1
 		rseed_test = rseed_test_data[nn]
-		alphadata = np.ones(K)
-	#	beta0new = [np.zeros((ca[cc].n_genes,K)).flatten() for cc in range(nc)]	# initialize beta to 0
 		torch.manual_seed(rseed_test)
 		beta0new = [0.001*torch.rand(ca_train[cc].n_genes,K).flatten() for cc in range(nc)]	# initialize beta
 		betabest_final = []
@@ -1376,7 +1268,6 @@ for cancers_type in cancers:
 				c1 = copy.deepcopy(ca_train[cc])
 				indmax = np.argmax(allpar_weight_av_single[cc,:])
 				lam_cv_single[cc] = lamall[cc,indmax] # in use2
-	#			cinddata, lambest1, cbest1, betta, cavm, forget = CV1(c1,K,np.array([lam_cv_single[cc]]),beta0new[cc],rseed,gamma0[cc])  # mu=0 # in use2			
 				retrn = CV1(c1,K,torch.tensor([lam_cv_single[cc]]),beta0new[cc],rseed,gamma0[cc],method,epoch)  # mu=0
 				betta = torch.squeeze(retrn.beta_v)
 				betabest_single.append(betta)
@@ -1386,8 +1277,7 @@ for cancers_type in cancers:
 					indmax = np.argmax(allpar_weight_av_multi[cc,:])
 					lam_cv_multi[cc] = lamdata_rand[indmax]  # in use
 					mu_cv_multi[cc] = mudata_rand[indmax]  # in use
-	#				cinddata, betabest, cavm, nonz_len_av_v, nonzgr_v = CV_rand(ca_train,K,[lam_cv_multi[cc]],beta0new,[mu_cv_multi[cc]],rseed,alphadata)  # mu=0 # in use
-					cinddata, betabest, cavm, nonz_len_av_v, nonzgr_v = CV_rand(ca_train,K,[lam_cv_multi[cc]],beta0new,[mu_cv_multi[cc]],rseed,alphadata,method,lr)  # mu=0
+					cinddata, betabest, cavm, nonz_len_av_v, nonzgr_v = CV_rand(ca_train,K,[lam_cv_multi[cc]],beta0new,[mu_cv_multi[cc]],rseed,method,lr,epoch)  # mu=0
 					betabest_final.append(betabest[0][cc])
 					print(str(cc+1) + ' / ' + str(nc) + ', multi, lambda =' + str(lam_cv_multi[cc]) + ', mu =' + str(mu_cv_multi[cc]) + ', c = ' + str(allpar_weight_av_multi[cc,indmax]/nr))
 					parsel[cc,nn,:] = np.append(lam_cv_multi[cc], mu_cv_multi[cc].flatten())  # save final selection
@@ -1413,11 +1303,7 @@ for cancers_type in cancers:
 #					colrange = [((ng-jj)/ng,(jj+1)/2/ng, 0) for jj in range(ng)]
 					cmap = mtplt.cm.get_cmap('Spectral') # viridis
 #					rgba = cmap(0.5)
-					
-		#			plt.plot(pric[ii],1,'o', color = (col[ii], 0.2, 0.5))
-		#			col = ng/np.max(pric)
-		#			color = (ca[0].groups/ng, 0.2, 0.5) # color grade
-					
+										
 					glist_orig, gunq_orig = group_list(ca[0].groups)
 					
 					plt.plot(betabest_single[cc],'o')
@@ -1434,39 +1320,25 @@ for cancers_type in cancers:
 						jjj = jj #sortind[jj] # sorted
 						if (np.linalg.norm(betabest_single[cc][glist_orig[jjj]]) > 1e-5):
 							c = cmap(jj/ng)
-#							plt.plot(np.arange(beg,beg+len(glist_orig[jjj])),np.sort(betabest_final[cc][glist_orig[jjj]]),'*', \
-#							color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
 							bplot = plt.boxplot(betabest_single[cc][glist_orig[jjj]], positions = [beg], labels = [jjj+1], patch_artist=True,\
 									boxprops=dict(facecolor=c, color=c))#,	color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
-#							beg += 500+len(glist_orig[jjj])    # shift beginning with lengh of the pathway
-		#					aas.append(ca[0].pnames[jj][0][0:10])  # first 10 chars
 							beg+=1;
 					plt.title('Single '+str(cancers_type[cc])+', lam = '+str(np.around(lam_cv_single[cc].numpy(),2)))#, mu = '+str(np.around(mu_cv_single[1][0][1].numpy(),2)))
 					plt.xlabel('pathway')
 					plt.ylabel('beta')
-		#			nclm = np.floor(len(aas)/10).astype(int)  # how many columns do we need
-		#			plt.xlim([None,ca[0].n_genes+12000*nclm])   # shift the plot so that we have space for labels
-		#			plt.legend(aas, ncol=nclm)
 					plt.savefig('single_'+str(cancers_type[0])+'_'+str(cancers_type[1])+'_'+str(cc)+'_boxplot.pdf')
 					plt.show()
 					
-	#				aas = []  # legend placeholder
 					maxpeak = np.zeros(ng)  # store ethe highest beta coefficient
 					for jj in range(ng):
 						maxpeak[jj] = torch.max(torch.abs(betabest_final[cc][glist_orig[jj]]))  # modulus of beta over pathway
 						if (np.linalg.norm(betabest_final[cc][glist_orig[jj]]) > 1e-5):
-		#				for ii in range(ca[0].n_genes):
-						# red: 255, 0, 0, green 0, 153, 0, purple to blue: color = ((jj+1)/ng, 0.2, 0.5)
 							plt.plot(glist_orig[jj],betabest_final[cc][glist_orig[jj]],'*', color = cmap(jj/ng)) #((ng-jj)/ng,(jj+1)/2/ng, 0)) # color grade)
-	#						aas.append(ca[0].pnames[jj][0][0:10])  # first 10 chars
 					plt.title('Multi '+str(cancers_type[cc])+', lam = ['+str(np.around(lam_cv_multi[cc][0],2))+', '\
 						 +str(np.around(lam_cv_multi[cc][1],2))+'], mu = '+str(np.around(mu_cv_multi[1][0][1].numpy(),2)))
 					plt.xlabel('covariate')
 					plt.ylabel('beta')
 					plt.xlim([0, ca[0].n_genes])
-		#			nclm = np.floor(len(aas)/10).astype(int)  # how many columns do we need
-		#			plt.xlim([None,ca[0].n_genes+12000*nclm])   # shift the plot so that we have space for labels
-		#			plt.legend(aas, ncol=nclm)
 					plt.savefig('multi_'+str(cancers_type[0])+'_'+str(cancers_type[1])+'_'+str(cc)+'.pdf')
 					plt.show()
 
@@ -1477,20 +1349,13 @@ for cancers_type in cancers:
 						jjj = jj #sortind[jj] # sorted
 						if (np.linalg.norm(betabest_final[cc][glist_orig[jjj]]) > 1e-5):
 							c = cmap(jj/ng)
-#							plt.plot(np.arange(beg,beg+len(glist_orig[jjj])),np.sort(betabest_final[cc][glist_orig[jjj]]),'*', \
-#							color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
 							bplot = plt.boxplot(betabest_final[cc][glist_orig[jjj]], positions = [beg], labels = [jjj+1], patch_artist=True,\
 									boxprops=dict(facecolor=c, color=c))#,	color = ((ng-jjj)/ng,(jjj+1)/2/ng, 0)) # color grade)
-#							beg += 500+len(glist_orig[jjj])    # shift beginning with lengh of the pathway
-		#					aas.append(ca[0].pnames[jj][0][0:10])  # first 10 chars
 							beg+=1;
 					plt.title('Multi '+str(cancers_type[cc])+', lam = ['+str(np.around(lam_cv_multi[cc][0],2))+', '\
 						 +str(np.around(lam_cv_multi[cc][1],2))+'], mu = '+str(np.around(mu_cv_multi[1][0][1].numpy(),2)))
 					plt.xlabel('pathway')
 					plt.ylabel('beta')
-		#			nclm = np.floor(len(aas)/10).astype(int)  # how many columns do we need
-		#			plt.xlim([None,ca[0].n_genes+12000*nclm])   # shift the plot so that we have space for labels
-		#			plt.legend(aas, ncol=nclm)
 					plt.savefig('multi_'+str(cancers_type[0])+'_'+str(cancers_type[1])+'_'+str(cc)+'_boxplot.pdf')
 					plt.show()
 
