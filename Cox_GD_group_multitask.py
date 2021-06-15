@@ -204,7 +204,6 @@ def multireg22(beta1,beta2,glist): # monster coupling term
 	betadif = torch.zeros(gnel)
 	beta1norm = torch.zeros(gnel)	# create an empty bucket for each group norm
 	beta2norm = torch.zeros(gnel)	# create an empty bucket for each group norm
-#	cos = torch.zeros(gnel)	# create an empty bucket for each group norm
 	p1norm = torch.zeros(gnel)#, dtype=torch.float64)
 	p2norm = torch.zeros(gnel)#, dtype=torch.float64)
 	p1 = torch.zeros(lb)#, dtype=torch.float64)
@@ -216,57 +215,21 @@ def multireg22(beta1,beta2,glist): # monster coupling term
 		if (beta1norm[jj]>tol and beta2norm[jj]>tol): # this removes the sign
 			p1[glist[jj][:]] = beta1[glist[jj][:]] - beta2[glist[jj][:]]/beta2norm[jj]*beta1norm[jj]
 			p2[glist[jj][:]] = beta2[glist[jj][:]] - beta1[glist[jj][:]]/beta1norm[jj]*beta2norm[jj]
-#			betadif2[glist[jj][:]] = 1/2*(torch.abs(p1) + torch.abs(p2));
-#		betadif[jj] = np.linalg.norm(betadif2[glist[jj][:]])
-#		betadif[jj] = torch.norm(betadif2[glist[jj][:]])
 		p1norm[jj] = torch.norm(p1[glist[jj][:]])
 		p2norm[jj] = torch.norm(p2[glist[jj][:]])
 		betadif[jj] = p1norm[jj] + p2norm[jj]
 	reg = np.linalg.norm(weigh*betadif)  # weighted 2norm of 2 norms
 
-#	regp12 = np.zeros(lb)
-#	regp22 = np.zeros(lb)
 	regp12 = torch.zeros(lb)#, dtype=torch.float64)
 	regp22 = torch.zeros(lb)#, dtype=torch.float64)
 	for jj in range(gnel):
 		if (beta1norm[jj]>tol and beta2norm[jj]>tol): # this removes the sign
-#			if reg>tol:
 				regp12[glist[jj][:]] = 1/reg*weigh[jj]**2*betadif[jj]*(1/p1norm[jj]*(p1[glist[jj][:]] - beta1[glist[jj][:]]/beta1norm[jj]/beta2norm[jj]*torch.sum(p1[glist[jj][:]]*beta2[glist[jj][:]])) \
 											- 1/p2norm[jj]*(beta2norm[jj]/beta1norm[jj]*p2[glist[jj][:]] - beta1[glist[jj][:]]*beta2norm[jj]/(beta1norm[jj]**3)*torch.sum(p2[glist[jj][:]]*beta1[glist[jj][:]])))
 				regp22[glist[jj][:]] = 1/reg*weigh[jj]**2*betadif[jj]*(1/p2norm[jj]*(p2[glist[jj][:]] - beta2[glist[jj][:]]/beta2norm[jj]/beta1norm[jj]*torch.sum(p2[glist[jj][:]]*beta1[glist[jj][:]])) \
 											- 1/p1norm[jj]*(beta1norm[jj]/beta2norm[jj]*p1[glist[jj][:]] - beta2[glist[jj][:]]*beta1norm[jj]/(beta2norm[jj]**3)*torch.sum(p1[glist[jj][:]]*beta2[glist[jj][:]])))
 
 	return reg, regp12, regp22
-#
-#beta1 = np.array([0,1,2,3,-4], dtype = 'float')
-#beta1 = torch.from_numpy(beta1)
-#beta2 = np.array([1,2,-1,2,-1], dtype = 'float')
-#beta2 = torch.from_numpy(beta2)
-#glist = [[1,2,3],[0,4]]
-#a,b,c = multireg22(beta1,beta2,glist)
-#
-##beta12 = np.array([0,1,2,3,4])
-##h = [0.2,0.1,0.05,0.025,0.0175]
-#h = torch.zeros(5)
-#der2 = torch.zeros(5)
-#h[0] = 0.1
-#for mm in range(1,5):
-#	h[mm] = h[mm-1]/2 
-#diff = torch.zeros(5)
-#for ii in range(5):
-##	beta13 = np.array([0,1+h[ii],2,3,-4], dtype = 'float')
-##	beta13 = torch.from_numpy(beta13)
-#	beta3 = np.array([1,2,-1,2+h[ii],-1],dtype = 'float')
-#	beta3 = torch.from_numpy(beta3)
-##	a3,b3,c3 = multireg22(beta13,beta2,glist)
-#	a3,b3,c3 = multireg22(beta1,beta3,glist)
-#	der2[ii] = (a3-a)/h[ii]
-##	diff[ii] = torch.abs(der2[ii]-b[1])
-#	diff[ii] = torch.abs(der2[ii]-c[3])
-#	
-##plt.loglog(h,np.abs(der2 - der2[4]),'o-',h,h,'*-')
-#plt.loglog(h,diff,'o-',h,h,'*-')
-#plt.show()	
 ########################################################################################################
 def multireg24(beta1,beta2,glist): #multireg 20 but better scale
 	tol = 5e-4 #5e-4
@@ -295,10 +258,6 @@ def multireg24(beta1,beta2,glist): #multireg 20 but better scale
 	for jj in range(gnel):
 		if (beta1norm[jj]>tol and beta2norm[jj]>tol): # this removes the sign
 			if reg>tol:
-#				regp12[glist[jj][:]] = 1/reg*weigh[jj]**2*betadif[jj]*(1/p1norm[jj]*(p1[glist[jj][:]] - beta1[glist[jj][:]]/beta1norm[jj]/beta2norm[jj]*torch.sum(p1[glist[jj][:]]*beta2[glist[jj][:]])) \
-#											- 1/p2norm[jj]*(beta2norm[jj]/beta1norm[jj]*p2[glist[jj][:]] - beta1[glist[jj][:]]*beta2norm[jj]/(beta1norm[jj]**3)*torch.sum(p2[glist[jj][:]]*beta1[glist[jj][:]])))
-#				regp22[glist[jj][:]] = 1/reg*weigh[jj]**2*betadif[jj]*(1/p2norm[jj]*(p2[glist[jj][:]] - beta2[glist[jj][:]]/beta2norm[jj]/beta1norm[jj]*torch.sum(p2[glist[jj][:]]*beta1[glist[jj][:]])) \
-#											- 1/p1norm[jj]*(beta1norm[jj]/beta2norm[jj]*p1[glist[jj][:]] - beta2[glist[jj][:]]*beta1norm[jj]/(beta2norm[jj]**3)*torch.sum(p1[glist[jj][:]]*beta2[glist[jj][:]])))
 				regp12[glist[jj][:]] = 1/reg*weigh[jj]**2*betadif[jj]*1/betadif[jj]*(betadif2[glist[jj][:]]/torch.sqrt(beta1norm[jj])*torch.sqrt(beta2norm[jj]) \
 										 - 1/2*beta1[glist[jj][:]]/(beta1norm[jj]**(5/2))*torch.sqrt(beta2norm[jj])*torch.sum(betadif2[glist[jj][:]]*beta1[glist[jj][:]]) \
 										 - 1/2*beta1[glist[jj][:]]/torch.sqrt(beta2norm[jj])/((beta1norm[jj])**(3/2))*torch.sum(betadif2[glist[jj][:]]*beta2[glist[jj][:]]))
@@ -383,10 +342,7 @@ def GD_gen(beta0_comp,ca,lamv,muv,method,lr,kmax)	:
 	tol = 1e-6  # tolerance
 	tol2 = 1e-3 # tolerance settin beta to 0
 	kk = 0 	# initiate interation nr
-#	kmax = 300	# max number of iterations
 	nc = len(ca)  # nr of cancers
-#	beta_fin = copy.deepcopy(beta0_comp)	# store forever
-#	beta_fin_old = copy.deepcopy(beta0_comp)
 	
 	beta_it = copy.deepcopy(beta0_comp)  # used for iterating
 	beta = torch.cat(beta_it)
